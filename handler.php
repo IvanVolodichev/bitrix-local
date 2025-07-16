@@ -27,12 +27,9 @@ try {
     ];
 
     $contactId = $contact->Add($contactFields);
-    if ( !$contactId )
-    {
-        $contactFields['RESULT_MESSAGE']; 
-    }
-    exit;
+    
     $deal = new CCrmDeal;
+
     $dealFields = [
         'TITLE' => 'Заявка с сайта ' . date('Y-m-d H:i:s'),
         'CONTACT_ID' => $contactId,
@@ -41,18 +38,6 @@ try {
     $dealId = $deal->Add($dealFields);
     if (!$dealId) {
         throw new Exception("Ошибка добавления сделки: " . $deal->LAST_ERROR);
-    }
-
-    $commentFields = [
-        'ENTITY_TYPE' => 'deal',
-        'ENTITY_ID' => $dealId,
-        'COMMENT' => $comment,
-        'AUTHOR_ID' => $contactId,
-    ];
-
-    $result = \Bitrix\Crm\Timeline\CommentEntry::create($commentFields);
-    if (!$result->isSuccess()) {
-        throw new Exception("Ошибка добавления комментария: " . implode('; ', $result->getErrorMessages()));
     }
 
     header("Location: /thanks.html");
