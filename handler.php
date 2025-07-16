@@ -1,58 +1,59 @@
 <?php
-
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_before.php");
 
 use Bitrix\Main\Loader;
-use Bitrix\Main\UI\Extension;
+use Bitrix\Main\Application;
 
-Loader::includeModule("crm");
-Loader::includeModule("main");
+// Включаем вывод ошибок для отладки (на продакшене убрать)
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 
-echo "<pre>";
-
-$entityId = 'CRM_DEAL'; // можно заменить на CRM_CONTACT, CRM_COMPANY и т.д.
-
-$res = CUserTypeEntity::GetList([], ['ENTITY_ID' => $entityId]);
-
-while ($field = $res->Fetch()) {
-    echo "Поле: " . $field['FIELD_NAME'] . PHP_EOL;
-    echo "Название: " . $field['EDIT_FORM_LABEL'] . PHP_EOL;
-    echo "Тип: " . $field['USER_TYPE_ID'] . PHP_EOL;
-    echo "---------------------------" . PHP_EOL;
+// Загружаем модуль CRM
+if (!Loader::includeModule('crm')) {
+    die("Ошибка: Не удалось загрузить модуль CRM");
 }
 
-echo "</pre>";
-
 // Получаем данные из формы
-$name = $_POST['name'] ?? '';
-$phone = $_POST['phone'] ?? '';
-$comment = $_POST['comment'] ?? '';
+$request = Application::getInstance()->getContext()->getRequest();
+$name = $request->getPost('name') ?? '';
+$phone = $request->getPost('phone') ?? '';
+$comment = $request->getPost('comment') ?? '';
+
+// Валидация данных
+if (empty($name) || empty($phone)) {
+    die("Ошибка: Не заполнены обязательные поля (имя и телефон)");
+}
 
 try {
-    $contact = new CCrmContact;
+    // 1. Создаем контакт
+    $contact = new CCrmContact(false);
     $contactFields = [
         'NAME' => $name,
-        'PHONE' => [
-            ['VALUE' => $phone, 'VALUE_TYPE' => 'WORK']
-        ],
+        'PHONE' => [['VALUE' => $phone, 'VALUE_TYPE' => 'WORK']],
+        'SOURCE_DESCRIPTION' => 'Заявка с сайта'
     ];
 
     $contactId = $contact->Add($contactFields);
     if (!$contactId) {
-        throw new Exception("Ошибка добавления контакта: " . $contact->LAST_ERROR);
+        throw new Exception("Ошибка создания контакта: " . ($contact->LAST_ERROR ?: 'неизвестная ошибка'));
     }
 
-    $deal = new CCrmDeal;
+    // 2. Создаем сделку
+    $deal = new CCrmDeal(false);
     $dealFields = [
-        'TITLE' => 'Заявка с сайта ' . date('Y-m-d H:i:s'),
+        'TITLE' => 'Заявка от ' . $name . ' (' . date('d.m.Y H:i') . ')',
         'CONTACT_ID' => $contactId,
+        'STAGE_ID' => 'NEW',
+        'SOURCE_ID' => 'WEB',
+        'ASSIGNED_BY_ID' => 1 // ID ответственного
     ];
 
     $dealId = $deal->Add($dealFields);
     if (!$dealId) {
-        throw new Exception("Ошибка добавления сделки: " . $deal->LAST_ERROR);
+        throw new Exception("Ошибка создания сделки: " . ($deal->LAST_ERROR ?: 'неизвестная ошибка'));
     }
 
+    // 3. Добавляем комментарий
     $commentFields = [
         'ENTITY_TYPE' => 'deal',
         'ENTITY_ID' => $dealId,
@@ -62,13 +63,20 @@ try {
 
     $result = \Bitrix\Crm\Timeline\CommentEntry::create($commentFields);
     if (!$result->isSuccess()) {
-        throw new Exception("Ошибка добавления комментария: " . implode('; ', $result->getErrorMessages()));
+        throw new Exception("Ошибка комментария: " . implode(', ', $result->getErrorMessages()));
     }
-    exit;
-    header("Location: /thanks.html");
+
+    // Логируем успешное выполнение
+    AddMessage2Log("Успешно создана заявка: Сделка ID {$dealId}, Контакт ID {$contactId}", "form_handler");
+
+    // Перенаправляем на страницу благодарности
+    LocalRedirect('/thanks.html');
 
 } catch (Exception $e) {
-    error_log("Form handler error: " . $e->getMessage());
-    http_response_code(500);
-    echo "Ошибка при обработке формы";
+    // Логируем полную ошибку
+    AddMessage2Log("Ошибка в форме: " . $e->getMessage(), "form_handler");
+    
+    // Показываем пользователю понятное сообщение
+    die("Произошла ошибка при обработке заявки. Пожалуйста, попробуйте позже или свяжитесь с нами по телефону. <br><small>Код ошибки: " . 
+        substr(md5(time()), 0, 6) . "</small>");
 }
