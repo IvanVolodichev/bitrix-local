@@ -18,7 +18,7 @@
     $contactId = $contact->Add([
         'NAME' => $formData['name'],
         'PHONE' => [
-            ['VALUE' => $formData['phone']
+            ['VALUE' => $formData['phone']]
         ],
     ]);
 
