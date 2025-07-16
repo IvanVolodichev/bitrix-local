@@ -33,14 +33,16 @@ try {
     $dealFields = [
         'TITLE' => 'Заявка с сайта ' . date('Y-m-d H:i:s'),
         'CONTACT_ID' => $contactId,
+        'COMMENTS' => $comment,
     ];
 
     $dealId = $deal->Add($dealFields);
+
     if (!$dealId) {
         throw new Exception("Ошибка добавления сделки: " . $deal->LAST_ERROR);
     }
 
-    header("Location: /thanks.html");
+    header("Location: ./thanks.html");
     exit;
 
 } catch (Exception $e) {
