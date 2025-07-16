@@ -16,9 +16,14 @@ try {
     $contact = new CCrmContact;
     $contactFields = [
         'NAME' => $name,
-        'PHONE' => [
-            ['VALUE' => $phone, 'VALUE_TYPE' => 'WORK']
-        ],
+        "FM" => [
+            "PHONE" => [
+                "1" => [
+                    "VALUE"      => $phone,
+                    "VALUE_TYPE" => "WORK",
+                ],   
+            ]
+        ]
     ];
 
     $contactId = $contact->Add($contactFields);
