@@ -22,10 +22,11 @@ try {
     ];
 
     $contactId = $contact->Add($contactFields);
-    if (!$contactId) {
-        throw new Exception("Ошибка добавления контакта: " . $contact->LAST_ERROR);
+    if ( !$contactId )
+    {
+        $contactFields['RESULT_MESSAGE']; 
     }
-
+    exit;
     $deal = new CCrmDeal;
     $dealFields = [
         'TITLE' => 'Заявка с сайта ' . date('Y-m-d H:i:s'),
