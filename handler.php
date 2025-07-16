@@ -6,6 +6,6 @@
     $response = file_get_contents($webhookUrl . $method . '.json');
     $data = json_decode($response, true);
 
-    print_r($data['result']);
+    var_dump($data['result']);
 
     exit;
