@@ -34,6 +34,7 @@ try {
         'TITLE' => 'Заявка с сайта ' . date('Y-m-d H:i:s'),
         'CONTACT_ID' => $contactId,
         'COMMENTS' => $comment,
+        'UF_CRM_1752661461592' => 27,
     ];
 
     $dealId = $deal->Add($dealFields);
